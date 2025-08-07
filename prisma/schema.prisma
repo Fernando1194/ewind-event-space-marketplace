@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  avatar    String?
+  role      UserRole @default(GUEST)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  venues       Venue[]
+  bookings     Booking[]
+  reviews      Review[]
+  ownerReviews Review[] @relation("OwnerReviews")
+
+  @@map("users")
+}
+
+model Venue {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  address     String
+  city        String
+  state       String
+  zipCode     String?
+  latitude    Float?
+  longitude   Float?
+  category    VenueCategory
+  capacity    Int
+  price       Float
+  images      String // JSON string of image URLs
+  amenities   String // JSON string of amenities
+  rules       String // JSON string of rules
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relacionamentos
+  ownerId  String
+  owner    User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+  reviews  Review[]
+
+  @@map("venues")
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  guestCount  Int
+  eventType   String?
+  message     String?
+  totalPrice  Float
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relacionamentos
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  guestId String
+  guest   User   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int // 1-5 stars
+  comment   String?
+  images    String? // JSON string of review images
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  venueId   String
+  venue     Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  guestId   String
+  guest     User   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  ownerId   String
+  owner     User   @relation("OwnerReviews", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, guestId]) // One review per guest per venue
+  @@map("reviews")
+}
+
+enum UserRole {
+  GUEST
+  HOST
+  ADMIN
+}
+
+enum VenueCategory {
+  CHACARA
+  RESTAURANTE
+  SALAO
+  POUSADA
+  CLUBE
+  ESPACO_RURAL
+  HOTEL
+  OUTROS
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
